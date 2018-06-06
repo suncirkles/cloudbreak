@@ -13,7 +13,7 @@ public class GenericResponse {
 
     private String version;
 
-    private String errorText;
+    private String errorText = "";
 
     public String getStatus() {
         return status;
