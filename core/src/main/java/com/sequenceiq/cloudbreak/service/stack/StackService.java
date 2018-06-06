@@ -191,8 +191,13 @@ public class StackService {
     }
 
     public Set<StackResponse> retrieveAccountStacks(IdentityUser user) {
-        return user.getRoles().contains(IdentityUserRole.ADMIN) ? convertStacks(stackRepository.findAllInAccountWithLists(user.getAccount()))
-                : convertStacks(stackRepository.findPublicInAccountForUser(user.getUserId(), user.getAccount()));
+        try {
+            return transactionService.required(() -> user.getRoles().contains(IdentityUserRole.ADMIN)
+                    ? convertStacks(stackRepository.findAllInAccountWithLists(user.getAccount()))
+                    : convertStacks(stackRepository.findPublicInAccountForUser(user.getUserId(), user.getAccount())));
+        } catch (TransactionExecutionException e) {
+            throw new TransactionService.TransactionRuntimeExecutionException(e);
+        }
     }
 
     public Set<Stack> retrieveAccountStacks(String account) {
@@ -204,20 +209,32 @@ public class StackService {
     }
 
     public StackResponse getJsonById(Long id, Collection<String> entry) {
-        Stack stack = getByIdWithLists(id);
-        authorizationService.hasReadPermission(stack);
-        StackResponse stackResponse = conversionService.convert(stack, StackResponse.class);
-        stackResponse = stackResponseDecorator.decorate(stackResponse, stack, entry);
-        return stackResponse;
+        try {
+            return transactionService.required(() -> {
+                Stack stack = getByIdWithLists(id);
+                authorizationService.hasReadPermission(stack);
+                StackResponse stackResponse = conversionService.convert(stack, StackResponse.class);
+                stackResponse = stackResponseDecorator.decorate(stackResponse, stack, entry);
+                return stackResponse;
+            });
+        } catch (TransactionExecutionException e) {
+            throw new TransactionService.TransactionRuntimeExecutionException(e);
+        }
     }
 
     public Stack get(Long id) {
-        Stack stack = stackRepository.findOne(id);
-        if (stack == null) {
-            throw new NotFoundException(String.format(STACK_NOT_FOUND_EXCEPTION_FORMAT_TEXT, id));
+        try {
+            return transactionService.required(() -> {
+                Stack stack = stackRepository.findOne(id);
+                if (stack == null) {
+                    throw new NotFoundException(String.format(STACK_NOT_FOUND_EXCEPTION_FORMAT_TEXT, id));
+                }
+                authorizationService.hasReadPermission(stack);
+                return stack;
+            });
+        } catch (TransactionExecutionException e) {
+            throw new TransactionService.TransactionRuntimeExecutionException(e);
         }
-        authorizationService.hasReadPermission(stack);
-        return stack;
     }
 
     @PreAuthorize("#oauth2.hasScope('cloudbreak.autoscale')")
@@ -294,23 +311,35 @@ public class StackService {
     }
 
     public StackResponse getPublicStackJsonByName(String name, IdentityUser identityUser, Collection<String> entries) {
-        Stack stack = stackRepository.findByNameInAccountWithLists(name, identityUser.getAccount());
-        if (stack == null) {
-            throw new NotFoundException(String.format(STACK_NOT_FOUND_EXCEPTION_FORMAT_TEXT, name));
+        try {
+            return transactionService.required(() -> {
+                Stack stack = stackRepository.findByNameInAccountWithLists(name, identityUser.getAccount());
+                if (stack == null) {
+                    throw new NotFoundException(String.format(STACK_NOT_FOUND_EXCEPTION_FORMAT_TEXT, name));
+                }
+                authorizationService.hasReadPermission(stack);
+                StackResponse stackResponse = conversionService.convert(stack, StackResponse.class);
+                stackResponse = stackResponseDecorator.decorate(stackResponse, stack, entries);
+                return stackResponse;
+            });
+        } catch (TransactionExecutionException e) {
+            throw new TransactionService.TransactionRuntimeExecutionException(e);
         }
-        authorizationService.hasReadPermission(stack);
-        StackResponse stackResponse = conversionService.convert(stack, StackResponse.class);
-        stackResponse = stackResponseDecorator.decorate(stackResponse, stack, entries);
-        return stackResponse;
     }
 
     public StackV2Request getStackRequestByName(String name, IdentityUser identityUser) {
-        Stack stack = stackRepository.findByNameInAccountWithLists(name, identityUser.getAccount());
-        if (stack == null) {
-            throw new NotFoundException(String.format(STACK_NOT_FOUND_EXCEPTION_FORMAT_TEXT, name));
+        try {
+            return transactionService.required(() -> {
+                Stack stack = stackRepository.findByNameInAccountWithLists(name, identityUser.getAccount());
+                if (stack == null) {
+                    throw new NotFoundException(String.format(STACK_NOT_FOUND_EXCEPTION_FORMAT_TEXT, name));
+                }
+                authorizationService.hasReadPermission(stack);
+                return conversionService.convert(stack, StackV2Request.class);
+            });
+        } catch (TransactionExecutionException e) {
+            throw new TransactionService.TransactionRuntimeExecutionException(e);
         }
-        authorizationService.hasReadPermission(stack);
-        return conversionService.convert(stack, StackV2Request.class);
     }
 
     public Stack getPublicStack(String name, IdentityUser identityUser) {
@@ -730,22 +759,6 @@ public class StackService {
         }
     }
 
-    private enum Msg {
-        STACK_STOP_IGNORED("stack.stop.ignored"),
-        STACK_START_IGNORED("stack.start.ignored"),
-        STACK_STOP_REQUESTED("stack.stop.requested");
-
-        private final String code;
-
-        Msg(String msgCode) {
-            code = msgCode;
-        }
-
-        public String code() {
-            return code;
-        }
-    }
-
     private void addTemplateForStack(Stack stack, String template) {
         StackTemplate stackTemplate = new StackTemplate(template, cbVersion);
         try {
@@ -763,6 +776,22 @@ public class StackService {
             componentConfigProvider.store(cbDetailsComponent);
         } catch (JsonProcessingException e) {
             LOGGER.error("Could not create Cloudbreak details component.", e);
+        }
+    }
+
+    private enum Msg {
+        STACK_STOP_IGNORED("stack.stop.ignored"),
+        STACK_START_IGNORED("stack.start.ignored"),
+        STACK_STOP_REQUESTED("stack.stop.requested");
+
+        private final String code;
+
+        Msg(String msgCode) {
+            code = msgCode;
+        }
+
+        public String code() {
+            return code;
         }
     }
 }
