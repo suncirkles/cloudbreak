@@ -25,4 +25,9 @@ public class GcpAuthenticator implements Authenticator {
     public AuthenticatedContext authenticate(CloudContext cloudContext, CloudCredential cloudCredential) {
         return new AuthenticatedContext(cloudContext, cloudCredential);
     }
+
+    @Override
+    public AuthenticatedContext authenticateFirstTime(CloudContext cloudContext, CloudCredential cloudCredential) {
+        return authenticate(cloudContext, cloudCredential);
+    }
 }

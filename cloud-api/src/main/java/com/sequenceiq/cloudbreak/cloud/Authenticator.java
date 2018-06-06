@@ -20,4 +20,14 @@ public interface Authenticator extends CloudPlatformAware {
      */
     AuthenticatedContext authenticate(CloudContext cloudContext, CloudCredential cloudCredential);
 
+    /**
+     * Invoked to authenticate against the Cloud provider for the first time, during creating auth credentials in cb.
+     * The AuthenticatedContext context object is not cached by Cloudbreak.
+     *
+     * @param cloudContext    the context containing information to identify which stack (cluster) is affected
+     * @param cloudCredential credentials for the given platform
+     * @return authenticated context object, shall contain a the authenticated client object. The client object needs to be threadsafe.
+     */
+    AuthenticatedContext authenticateFirstTime(CloudContext cloudContext, CloudCredential cloudCredential);
+
 }

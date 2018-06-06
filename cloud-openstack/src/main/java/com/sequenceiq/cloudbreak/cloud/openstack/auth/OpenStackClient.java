@@ -77,6 +77,15 @@ public class OpenStackClient {
         }
     }
 
+    public AuthenticatedContext createAuthenticatedContextFirstTime(CloudContext cloudContext, CloudCredential cloudCredential) {
+        KeystoneCredentialView keystoneCredentialView = createKeystoneCredential(cloudCredential);
+        if (KeystoneCredentialView.CB_KEYSTONE_V3.equals(keystoneCredentialView.getVersion())
+                && KeystoneCredentialView.CB_KEYSTONE_V3_DEFAULT_SCOPE.equals(keystoneCredentialView.getScope())) {
+            throw new CloudConnectorException("Creation of Openstack Keystone credentials with default scope is not supported");
+        }
+        return createAuthenticatedContext(cloudContext, cloudCredential);
+    }
+
     public AuthenticatedContext createAuthenticatedContext(CloudContext cloudContext, CloudCredential cloudCredential) {
         AuthenticatedContext authenticatedContext = new AuthenticatedContext(cloudContext, cloudCredential);
         createAccessOrToken(authenticatedContext);

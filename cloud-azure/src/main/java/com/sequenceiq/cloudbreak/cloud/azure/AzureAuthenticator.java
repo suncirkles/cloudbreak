@@ -34,6 +34,11 @@ public class AzureAuthenticator implements Authenticator {
     }
 
     @Override
+    public AuthenticatedContext authenticateFirstTime(CloudContext cloudContext, CloudCredential cloudCredential) {
+        return authenticate(cloudContext, cloudCredential);
+    }
+
+    @Override
     public Platform platform() {
         return AzureConstants.PLATFORM;
     }

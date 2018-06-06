@@ -37,4 +37,9 @@ public class AwsAuthenticator implements Authenticator {
         awsClient.checkAwsEnvironmentVariables(cloudCredential);
         return awsClient.createAuthenticatedContext(cloudContext, cloudCredential);
     }
+
+    @Override
+    public AuthenticatedContext authenticateFirstTime(CloudContext cloudContext, CloudCredential cloudCredential) {
+        return authenticate(cloudContext, cloudCredential);
+    }
 }

@@ -23,6 +23,11 @@ public class MockAuthenticator implements Authenticator {
     }
 
     @Override
+    public AuthenticatedContext authenticateFirstTime(CloudContext cloudContext, CloudCredential cloudCredential) {
+        return authenticate(cloudContext, cloudCredential);
+    }
+
+    @Override
     public Platform platform() {
         return MockConstants.MOCK_PLATFORM;
     }
